@@ -1,23 +1,47 @@
 import MovieCard from "@/components/MovieCard";
 import SearchBar from "@/components/SearchBar";
+import TrendingCard from "@/components/TrendingCard";
 import { icons } from "@/constants/icons";
 import { images } from "@/constants/images";
 import { fetchMovies } from "@/services/api";
+import { getTrendingMovies } from "@/services/appwrite";
 import useFetch from "@/services/useFetch";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, FlatList, Image, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 
 export default function Index() {
   const router = useRouter();
+
+  const {
+    data: trendingMovies,
+    loading: trendingLoading,
+    error: trendingError,
+  } = useFetch(getTrendingMovies);
   const {
     data: movies,
     loading: moviesLoading,
     error: moviesError,
-  } = useFetch(() => fetchMovies({ query: "iron man" }));
+  } = useFetch(() => fetchMovies({ query: "" }));
+
+  const uniqueTrendingMovies = trendingMovies?.filter(
+    (movie, index, self) => 
+      index === self.findIndex(m => m.movie_id === movie.movie_id)
+  );
 
   return (
     <View className="flex-1 bg-primary">
-      <Image source={images.bg} className="absolute w-full z-0" />
+      <Image
+        source={images.bg}
+        className="flex-1 absolute w-full z-0"
+        resizeMode="cover"
+      />
 
       <ScrollView
         className="flex-1 px-5"
@@ -26,31 +50,47 @@ export default function Index() {
       >
         <Image source={icons.logo} className="w-12 h-10 mt-20 mb-5 mx-auto" />
 
-        {moviesLoading ? (
+        {moviesLoading || trendingLoading ? (
           <ActivityIndicator
             size="large"
             color="#0000ff"
             className="mt-10 self-center"
           />
-        ) : moviesError ? (
-          <Text>Error: {moviesError.message}</Text>
+        ) : moviesError || trendingError ? (
+          <Text>Error: {moviesError?.message || trendingError?.message}</Text>
         ) : (
           <View className="flex-1 mt-5">
             <SearchBar
               onPress={() => router.push("/search")}
               placeholder="search for a movie"
             />
+
+            {trendingMovies && (
+              <View className="mt-10">
+                <Text className="text-lg text-white font-bold mb-3">
+                  Trending Movies
+                </Text>
+              </View>
+            )}
             <>
+              <FlatList
+                horizontal={true}
+                className="mb-4 mt-3"
+                showsHorizontalScrollIndicator={false}
+                data={uniqueTrendingMovies}
+                renderItem={({ item, index }) => (
+                  <TrendingCard movie={item} index={index} />
+                )}
+                keyExtractor={(item) => item.movie_id.toString()}
+              />
+
               <Text className="text-lg text-white font-bold mt-5 mb-3">
                 Latest Movies
               </Text>
-
-              <FlatList data={movies}
-                renderItem={({item})=> (
-                  <MovieCard {...item} />
-                  // <Text className="text-white text-sm">{item.title}</Text>
-                )}
-                keyExtractor={(item)=> item.id.toString()}
+              <FlatList
+                data={movies}
+                renderItem={({ item }) => <MovieCard {...item} />}
+                keyExtractor={(item) => item.id.toString()}
                 scrollEnabled={false}
                 numColumns={3}
                 columnWrapperStyle={{
@@ -67,58 +107,4 @@ export default function Index() {
       </ScrollView>
     </View>
   );
-
 }
-
-
-// =======================================================================
-  // const renderHeader = () => (
-  //   <>
-  //     <Image source={images.bg} className="absolute w-full z-0" />
-  //     <Image source={icons.logo} className="w-12 h-10 mt-20 mb-5 mx-auto" />
-  //     <SearchBar
-  //       onPress={() => router.push("/search")}
-  //       placeholder="search for a movie"
-  //     />
-  //     <Text className="text-lg text-white font-bold mt-5 mb-3">
-  //       Latest Movies
-  //     </Text>
-  //   </>
-  // );
-
-  // if (moviesLoading) {
-  //   return (
-  //     <View className="flex-1 bg-primary justify-center items-center">
-  //       <Image source={images.bg} className="absolute w-full z-0" />
-  //       <ActivityIndicator size="large" color="#0000ff" />
-  //     </View>
-  //   );
-  // }
-
-  // if (moviesError) {
-  //   return (
-  //     <View className="flex-1 bg-primary justify-center items-center">
-  //       <Image source={images.bg} className="absolute w-full z-0" />
-  //       <Text className="text-white">Error: {moviesError.message}</Text>
-  //     </View>
-  //   );
-  // }
-
-  // return (
-  //   <View className="flex-1 bg-primary">
-  //     <FlatList
-  //       data={movies}
-  //       renderItem={({ item }) => (
-  //         <Text className="text-white text-sm px-5">{item.title}</Text>
-  //       )}
-  //       keyExtractor={(item) => item.id.toString()}
-  //       ListHeaderComponent={renderHeader}
-  //       contentContainerStyle={{ paddingBottom: 10, paddingHorizontal: 5 }}
-  //       showsVerticalScrollIndicator={false}
-  //     />
-  //   </View>
-  // );
-
-// ==============================================================
-
-  
